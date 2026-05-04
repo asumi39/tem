@@ -1,0 +1,15 @@
+Dockerfile
+docker-compose.yml
+.dockerignore
+.next/
+node_modules/
+.git/
+.env*.local
+*.test.ts
+*.test.tsx
+tests/
+playwright.config.ts
+vitest.config.ts
+README.md
+AGENTS.md
+CLAUDE.md
