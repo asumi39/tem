@@ -1,0 +1,269 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum QuestionType {
+  WRITING_SUMMARY
+  WRITING_PARAGRAPH
+  WRITING_OUTLINE
+  WRITING_FRAMEWORK
+  WRITING_FULL_MOCK
+  MULTIPLE_CHOICE
+  CLOZE
+  READING
+  DICTATION
+  INTERVIEW
+  LISTENING
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  SCORING
+  SCORED
+  FAILED
+}
+
+enum InputMethod {
+  MANUAL
+  OCR_IMAGE
+  FILE_IMPORT
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+}
+
+enum ScorerType {
+  AI
+  TEACHER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      UserRole @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authoredQuestions      Question[]      @relation("QuestionAuthor")
+  authoredExamTemplates  ExamTemplate[]  @relation("ExamTemplateAuthor")
+  examAttempts           ExamAttempt[]   @relation("StudentAttempts")
+  scoringRubrics         ScoringRubric[] @relation("RubricAuthor")
+  teacherScoringResults  ScoringResult[] @relation("TeacherScoringResults")
+}
+
+model Question {
+  id             String       @id @default(cuid())
+  type           QuestionType
+  title          String       @unique
+  prompt         String
+  standardAnswer Json?
+  explanation    Json?
+  scoringConfig  Json?
+  resources      Json?
+  renderConfig   Json?
+  gradingConfig  Json?
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  createdBy             User?                  @relation("QuestionAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  examTemplateQuestions ExamTemplateQuestion[]
+  answers               Answer[]
+  scoringResults        ScoringResult[]
+
+  @@index([type])
+  @@index([createdById])
+}
+
+model ExamTemplate {
+  id               String   @id @default(cuid())
+  title            String
+  description      String?
+  durationMinutes  Int?
+  visibilityConfig Json?
+  createdById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  createdBy User?                  @relation("ExamTemplateAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  questions ExamTemplateQuestion[]
+  attempts  ExamAttempt[]
+
+  @@index([createdById])
+}
+
+model ExamTemplateQuestion {
+  id             String @id @default(cuid())
+  examTemplateId String
+  questionId     String
+  order          Int
+  points         Int
+
+  examTemplate ExamTemplate @relation(fields: [examTemplateId], references: [id], onDelete: Cascade)
+  question     Question     @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@unique([examTemplateId, questionId])
+  @@unique([examTemplateId, order])
+  @@index([questionId])
+}
+
+model ExamAttempt {
+  id                     String        @id @default(cuid())
+  studentId              String
+  examTemplateId         String
+  status                 AttemptStatus @default(IN_PROGRESS)
+  startedAt              DateTime      @default(now())
+  submittedAt            DateTime?
+  durationSeconds        Int?
+  totalScore             Float?
+  maxScore               Float?
+  examTemplateSnapshot   Json
+  questionSnapshot       Json
+  standardAnswerSnapshot Json?
+  explanationSnapshot    Json?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  student      User            @relation("StudentAttempts", fields: [studentId], references: [id], onDelete: Cascade)
+  examTemplate ExamTemplate    @relation(fields: [examTemplateId], references: [id], onDelete: Restrict)
+  answers      Answer[]
+  scoringResults ScoringResult[]
+
+  @@index([studentId, status])
+  @@index([examTemplateId])
+}
+
+model Answer {
+  id            String      @id @default(cuid())
+  examAttemptId String
+  questionId    String
+  inputMethod   InputMethod @default(MANUAL)
+  manualText    String?
+  ocrText       String?
+  finalText     String?
+  metadata      Json?
+  isSubmitted   Boolean     @default(false)
+  submittedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  examAttempt ExamAttempt @relation(fields: [examAttemptId], references: [id], onDelete: Cascade)
+  question    Question    @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  attachments Attachment[]
+  ocrJobs     OcrJob[]
+  scoringResults ScoringResult[]
+
+  @@unique([examAttemptId, questionId])
+  @@index([questionId])
+}
+
+model Attachment {
+  id            String   @id @default(cuid())
+  answerId      String
+  objectKey     String
+  fileName      String
+  contentType   String
+  byteSize      Int
+  checksum      String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  answer  Answer   @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  ocrJobs OcrJob[]
+
+  @@index([answerId])
+}
+
+model OcrJob {
+  id             String    @id @default(cuid())
+  answerId       String
+  attachmentId   String?
+  status         JobStatus @default(PENDING)
+  provider       String?
+  modelName      String?
+  modelVersion   String?
+  inputSummary   Json?
+  outputText     String?
+  confidence     Float?
+  outputPayload  Json?
+  errorMessage   String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  answer     Answer      @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  attachment Attachment? @relation(fields: [attachmentId], references: [id], onDelete: SetNull)
+
+  @@index([answerId])
+  @@index([attachmentId])
+  @@index([status])
+}
+
+model ScoringRubric {
+  id          String       @id @default(cuid())
+  title       String       @unique
+  description String?
+  questionType QuestionType?
+  maxScore    Float
+  criteria    Json
+  createdById String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  createdBy User?           @relation("RubricAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  results   ScoringResult[]
+
+  @@index([questionType])
+  @@index([createdById])
+}
+
+model ScoringResult {
+  id              String     @id @default(cuid())
+  examAttemptId   String
+  answerId        String?
+  questionId      String?
+  rubricId        String?
+  scorerType      ScorerType
+  scoredById      String?
+  score           Float?
+  maxScore        Float?
+  rubricBreakdown Json
+  feedback        Json
+  modelName       String?
+  modelVersion    String?
+  inputSummary    Json?
+  rawOutput       Json?
+  callStatus      JobStatus?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  examAttempt ExamAttempt    @relation(fields: [examAttemptId], references: [id], onDelete: Cascade)
+  answer      Answer?        @relation(fields: [answerId], references: [id], onDelete: SetNull)
+  question    Question?      @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  rubric      ScoringRubric? @relation(fields: [rubricId], references: [id], onDelete: SetNull)
+  scoredBy    User?          @relation("TeacherScoringResults", fields: [scoredById], references: [id], onDelete: SetNull)
+
+  @@index([examAttemptId])
+  @@index([answerId])
+  @@index([questionId])
+  @@index([rubricId])
+  @@index([scorerType])
+}

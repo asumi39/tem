@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  --tem-bg: #efe7d3;
+  --tem-paper: #fff8e8;
+  --tem-ink: #2a1f14;
+  --tem-muted: #756651;
+  --tem-border: #d8c7a6;
+  --tem-sand: #eadbbf;
+  --tem-gold: #d6a13a;
+  --tem-vermilion: #b43e23;
+  --background: var(--tem-bg);
+  --foreground: var(--tem-ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-serif);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--tem-bg);
+}
+
+body {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(214, 161, 58, 0.24), transparent 30rem),
+    radial-gradient(circle at 90% 10%, rgba(180, 62, 35, 0.16), transparent 26rem),
+    linear-gradient(115deg, rgba(255, 248, 232, 0.66), rgba(239, 231, 211, 0.92)),
+    var(--tem-bg);
+  color: var(--foreground);
+  font-family: var(--font-serif), Georgia, serif;
+}
+
+body::before {
+  background-image:
+    linear-gradient(rgba(42, 31, 20, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(42, 31, 20, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: fixed;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+button,
+a,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: var(--tem-gold);
+  color: var(--tem-ink);
+}
