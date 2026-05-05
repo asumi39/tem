@@ -24,7 +24,7 @@ export function isDemoAuthEnabled(): boolean {
     return true;
   }
 
-  return process.env.NODE_ENV !== "production" && process.env.DEMO_AUTH_ENABLED === "true";
+  return process.env.DEMO_AUTH_ENABLED === "true" || process.env.NODE_ENV !== "production";
 }
 
 export async function getCurrentUser(): Promise<CurrentUser> {
