@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "2026:3000"
+      - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://temuser:tempass@db:5432/temdb
       - NODE_ENV=production
